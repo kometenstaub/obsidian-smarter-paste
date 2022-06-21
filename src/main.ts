@@ -92,11 +92,10 @@ export default class YankHighlighter extends Plugin {
 						return function (...args: any[]) {
 							let cm6Editor: EditorView;
 							if (args.at(1) === 'yank')
-								cm6Editor =
-									app.workspace.getActiveViewOfType(
-										MarkdownView
-										// @ts-expect-error, not typed
-									).editor.cm;
+								cm6Editor = app.workspace.getActiveViewOfType(
+									MarkdownView
+									// @ts-expect-error, not typed
+								).editor.cm;
 							cm6Editor.plugin(viewPlugin).makeYankDeco();
 							const result =
 								oldMethod && oldMethod.apply(this, args);

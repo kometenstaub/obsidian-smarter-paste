@@ -8,7 +8,7 @@
 		"build": "cross-env BUILD=production node esbuild.mjs",
 		"release": "standard-version",
 		"lint": "npx eslint src/",
-		"format": "npx prettier --write src/",
+		"format": "npx prettier --write src/ esbuild.mjs",
 		"css": "npx sass --watch src/styles.scss build/styles.css"
 	},
 	"standard-version": {
@@ -36,7 +36,7 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
-		"@codemirror/view": "^0.19.48",
+		"@codemirror/view": "6.0.1",
 		"monkey-around": "https://github.com/pjeby/monkey-around"
 	},
 	"devDependencies": {

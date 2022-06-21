@@ -1,10 +1,11 @@
 import {
+	App,
 	MarkdownView,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
-} from 'obsidian';
+} from "obsidian";
 import { around } from 'monkey-around';
 import {
 	Decoration,
@@ -129,7 +130,7 @@ export default class YankHighlighter extends Plugin {
 class YankSettingTab extends PluginSettingTab {
 	plugin: YankHighlighter;
 
-	constructor(app: App, plugin: SKOSPlugin) {
+	constructor(app: App, plugin: YankHighlighter) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

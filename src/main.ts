@@ -1,11 +1,12 @@
 import {
 	App,
+	editorViewField,
 	MarkdownView,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
-} from "obsidian";
+} from 'obsidian';
 import { around } from 'monkey-around';
 import {
 	Decoration,
@@ -33,7 +34,7 @@ class HighlightPlugin {
 	timeout: number;
 	// highlightTime: number;
 
-	constructor(view: EditorView) {
+	constructor(public view: EditorView) {
 		this.decorations = Decoration.none;
 		// @ts-expect-error, not typed
 		this.timeout = app.plugins.plugins['yank-highlight'].settings.timeout;
@@ -48,7 +49,7 @@ class HighlightPlugin {
 
 	makeYankDeco() {
 		const deco = [];
-		const { editor } = app.workspace.getActiveViewOfType(MarkdownView);
+		const { editor } = this.view.state.field(editorViewField);
 		const posFrom = editor.posToOffset(editor.getCursor('from'));
 		const posTo = editor.posToOffset(editor.getCursor('to'));
 		const yankDeco = Decoration.mark({

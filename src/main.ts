@@ -1,6 +1,4 @@
 import {
-	EventRef,
-	Events,
 	MarkdownView,
 	Notice,
 	Plugin,
@@ -29,86 +27,77 @@ interface YankSettings {
 
 const DEFAULT_SETTINGS: YankSettings = { timeout: 2000 };
 
-class YankEvent extends Events {
-	on(name: 'vim-yank', callback: (text: string) => void): EventRef;
-	on(name: string, callback: (...data: any) => any, ctx?: any): EventRef {
-		return super.on(name, callback, ctx);
+class HighlightPlugin {
+	decorations: DecorationSet;
+	timeout: number;
+	// highlightTime: number;
+
+	constructor(view: EditorView) {
+		this.decorations = Decoration.none;
+		// @ts-expect-error, not typed
+		this.timeout = app.plugins.plugins['yank-highlight'].settings.timeout;
+	}
+	// update unnecessary because highlight gets removed by timeout; otherwise it would never apply the classes
+	// update(update: ViewUpdate) {
+	//	if (update.selectionSet || update.docChanged || update.viewportChanged) {
+	//		this.decorations = Decoration.none;
+	//		// this.makeYankDeco(update.view);
+	//
+	// }
+
+	makeYankDeco() {
+		const deco = [];
+		const { editor } = app.workspace.getActiveViewOfType(MarkdownView);
+		const posFrom = editor.posToOffset(editor.getCursor('from'));
+		const posTo = editor.posToOffset(editor.getCursor('to'));
+		const yankDeco = Decoration.mark({
+			class: 'yank-deco',
+			attributes: { 'data-contents': 'string' },
+		});
+		deco.push(yankDeco.range(posFrom, posTo));
+		this.decorations = Decoration.set(deco);
+		window.setTimeout(
+			() => (this.decorations = Decoration.none),
+			this.timeout
+		);
 	}
 }
 
 // cm6 view plugin
-function matchHighlighter(evt: YankEvent, timeout: number) {
-	return ViewPlugin.fromClass(
-		class {
-			decorations: DecorationSet;
-			// highlightTime: number;
-
-			constructor(view: EditorView) {
-				this.decorations = Decoration.none;
-				evt.on('vim-yank', (text) => {
-					const [cursorFrom, cursorTo] = this.getPositions();
-					this.decorations = this.makeYankDeco(
-						view,
-						cursorFrom,
-						cursorTo
-					);
-					// timeout needs to be configured in settings
-					window.setTimeout(
-						() => (this.decorations = Decoration.none),
-						timeout
-					);
-				});
-			}
-			// update unnecessary because highlight gets removed by timeout; otherwise it would never apply the classes
-			// update(update: ViewUpdate) {
-			//	if (update.selectionSet || update.docChanged || update.viewportChanged) {
-			//		this.decorations = Decoration.none;
-			//		// this.makeYankDeco(update.view);
-			//
-			// }
-
-			getPositions() {
-				const { editor } =
-					app.workspace.getActiveViewOfType(MarkdownView);
-				const cursorFrom = editor.posToOffset(editor.getCursor('from'));
-				const cursorTo = editor.posToOffset(editor.getCursor('to'));
-				return [cursorFrom, cursorTo];
-			}
-
-			makeYankDeco(view: EditorView, posFrom: number, posTo: number) {
-				const deco = [];
-				const yankDeco = Decoration.mark({
-					class: 'yank-deco',
-					attributes: { 'data-contents': 'string' },
-				});
-				deco.push(yankDeco.range(posFrom, posTo));
-				return Decoration.set(deco);
-			}
-		},
-		{ decorations: (v) => v.decorations }
-	);
+function matchHighlighter() {
+	return ViewPlugin.fromClass(HighlightPlugin, {
+		decorations: (v) => v.decorations,
+	});
 }
 
 export default class YankHighlighter extends Plugin {
-	yankEventUninstaller: any;
+	highlightUninstaller: any;
 	uninstall = false;
-	yank: YankEvent;
 	settings: YankSettings;
+	cmPlugin: ViewPlugin<any>;
 
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new YankSettingTab(this.app, this));
+
+		const viewPlugin = (this.cmPlugin = matchHighlighter());
+		this.registerEditorExtension(this.cmPlugin);
+
 		if (this.app.vault.getConfig('vimMode')) {
-			const yank = new YankEvent();
-			this.yankEventUninstaller = around(
+			this.highlightUninstaller = around(
 				// @ts-expect-error, not typed
 				window.CodeMirrorAdapter?.Vim.getRegisterController(),
 				{
 					pushText(oldMethod: any) {
 						return function (...args: any[]) {
+							let cm6Editor: EditorView;
 							if (args.at(1) === 'yank')
-								yank.trigger('vim-yank', args.at(2));
-
+								cm6Editor =
+									app.workspace.getActiveViewOfType(
+										MarkdownView
+										// @ts-expect-error, not typed
+									).editor.cm;
+							cm6Editor.plugin(viewPlugin).makeYankDeco();
 							const result =
 								oldMethod && oldMethod.apply(this, args);
 							return result;
@@ -116,15 +105,12 @@ export default class YankHighlighter extends Plugin {
 					},
 				}
 			);
-			this.registerEditorExtension(
-				matchHighlighter(yank, this.settings.timeout)
-			);
 			this.uninstall = true;
 		}
 		console.log('Yank Highlight plugin loaded.');
 	}
 	async onunload() {
-		if (this.uninstall) this.yankEventUninstaller();
+		if (this.uninstall) this.highlightUninstaller();
 
 		console.log('Yank Highlight plugin unloaded.');
 	}

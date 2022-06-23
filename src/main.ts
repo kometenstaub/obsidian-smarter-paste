@@ -29,47 +29,50 @@ interface YankSettings {
 
 const DEFAULT_SETTINGS: YankSettings = { timeout: 2000 };
 
-class HighlightPlugin {
-	decorations: DecorationSet;
-	timeout: number;
-	// highlightTime: number;
-
-	constructor(public view: EditorView) {
-		this.decorations = Decoration.none;
-		// @ts-expect-error, not typed
-		this.timeout = app.plugins.plugins['yank-highlight'].settings.timeout;
-	}
-	// update unnecessary because highlight gets removed by timeout; otherwise it would never apply the classes
-	// update(update: ViewUpdate) {
-	//	if (update.selectionSet || update.docChanged || update.viewportChanged) {
-	//		this.decorations = Decoration.none;
-	//		// this.makeYankDeco(update.view);
-	//
-	// }
-
-	makeYankDeco() {
-		const deco = [];
-		const { editor } = this.view.state.field(editorViewField);
-		const posFrom = editor.posToOffset(editor.getCursor('from'));
-		const posTo = editor.posToOffset(editor.getCursor('to'));
-		const yankDeco = Decoration.mark({
-			class: 'yank-deco',
-			attributes: { 'data-contents': 'string' },
-		});
-		deco.push(yankDeco.range(posFrom, posTo));
-		this.decorations = Decoration.set(deco);
-		window.setTimeout(
-			() => (this.decorations = Decoration.none),
-			this.timeout
-		);
-	}
-}
-
 // cm6 view plugin
-function matchHighlighter() {
-	return ViewPlugin.fromClass(HighlightPlugin, {
-		decorations: (v) => v.decorations,
-	});
+function matchHighlighter(plugin: YankHighlighter) {
+	return ViewPlugin.fromClass(
+		class HighlightPlugin {
+			decorations: DecorationSet;
+			timeout: number;
+			plugin: YankHighlighter;
+			// highlightTime: number;
+
+			constructor(public view: EditorView) {
+				this.decorations = Decoration.none;
+				//this.timeout = app.plugins.plugins['yank-highlight'].settings.timeout;
+				this.plugin = plugin;
+				this.timeout = this.plugin.settings.timeout;
+			}
+			// update unnecessary because highlight gets removed by timeout; otherwise it would never apply the classes
+			// update(update: ViewUpdate) {
+			//	if (update.selectionSet || update.docChanged || update.viewportChanged) {
+			//		this.decorations = Decoration.none;
+			//		// this.makeYankDeco(update.view);
+			//
+			// }
+
+			makeYankDeco() {
+				const deco = [];
+				const { editor } = this.view.state.field(editorViewField);
+				const posFrom = editor.posToOffset(editor.getCursor('from'));
+				const posTo = editor.posToOffset(editor.getCursor('to'));
+				const yankDeco = Decoration.mark({
+					class: 'yank-deco',
+					attributes: { 'data-contents': 'string' },
+				});
+				deco.push(yankDeco.range(posFrom, posTo));
+				this.decorations = Decoration.set(deco);
+				setTimeout(
+					() => (this.decorations = Decoration.none),
+					this.timeout
+				);
+			}
+		},
+		{
+			decorations: (v) => v.decorations,
+		}
+	);
 }
 
 export default class YankHighlighter extends Plugin {
@@ -82,7 +85,7 @@ export default class YankHighlighter extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new YankSettingTab(this.app, this));
 
-		const viewPlugin = (this.cmPlugin = matchHighlighter());
+		const viewPlugin = (this.cmPlugin = matchHighlighter(this));
 		this.registerEditorExtension(this.cmPlugin);
 
 		if (this.app.vault.getConfig('vimMode')) {
@@ -93,12 +96,13 @@ export default class YankHighlighter extends Plugin {
 					pushText(oldMethod: any) {
 						return function (...args: any[]) {
 							let cm6Editor: EditorView;
-							if (args.at(1) === 'yank')
+							if (args.at(1) === 'yank') {
 								cm6Editor = app.workspace.getActiveViewOfType(
 									MarkdownView
 									// @ts-expect-error, not typed
 								).editor.cm;
-							cm6Editor.plugin(viewPlugin).makeYankDeco();
+								cm6Editor.plugin(viewPlugin).makeYankDeco();
+							}
 							const result =
 								oldMethod && oldMethod.apply(this, args);
 							return result;

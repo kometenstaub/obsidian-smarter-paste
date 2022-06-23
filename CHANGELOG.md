@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.3](https://github.com/kometenstaub/obsidian-vim-yank-highlight/compare/1.1.2...1.1.3) (2022-06-23)
+
+
+### Bug Fixes
+
+* only make deco on yank, not pushText ([5643ebc](https://github.com/kometenstaub/obsidian-vim-yank-highlight/commit/5643ebc51dfd6fb6fe28289e112b38e007ee02b8))
+
 ### [1.1.2](https://github.com/kometenstaub/obsidian-vim-yank-highlight/compare/1.1.1...1.1.2) (2022-06-21)
 
 ### [1.1.1](https://github.com/kometenstaub/obsidian-vim-yank-highlight/compare/1.1.0...1.1.1) (2022-06-21)
